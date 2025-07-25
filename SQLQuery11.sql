@@ -19,30 +19,32 @@ from emp;
 
 ------------------------------------------------1. RUNNING SALARY------------------------------------------------------------------ -----
 select * ,
-sum(Salary) over (partition by dept_id order by age) as sumOfSalary1after1  --sum of salary of curr row is  curr_salary + nxt_salary
+sum(Salary) over (partition by dept_id order by age) as sumOfSalary1after1  --sum of salary of curr row is  curr_salary + all_previous_salary
 from emp;
-
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+select e_id , dept_id,age,salary,
+sum(Salary) over (partition by dept_id order by age) as sum1 ,  --sum of salary of same age comes same total_salary,
+sum(Salary) over (partition by dept_id order by age,e_id) as sum1   -- resolve it by age,e_id
+from emp
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 select * ,
 sum(Salary) over (partition by dept_id) as totalSum ,          --Sum of salary is same in each dept
-sum(Salary) over (partition by dept_id order by age) as sumOfSalary1after1  --sum of salary of curr row is  curr_salary + nxt_salary
+sum(Salary) over (partition by dept_id order by age) as sumOfSalary1after1  --sum of salary of curr row is  curr_salary + all_previous_rows
 from emp;
 
-
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+select e_id , dept_id,salary,max(salary) over (partition by dept_id order by e_id asc ) as m2 --max salary among the dept_id 
+from emp
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 
 select *,
 max(salary) over (partition by dept_id ) as m1,
-max(salary) over (partition by dept_id order by e_id asc ) as m2,
-max(salary) over (partition by dept_id order by e_id desc) as m3
+max(salary) over (partition by dept_id order by e_id asc ) as m2, --max salary among the dept_id 
+max(salary) over (partition by dept_id order by e_id desc) as m3  --max salary from the previous salary row in order by e_id 
 from emp;
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------
-select name,dept_id,salary,
-max(salary) over (order by salary asc) as desc_m1 -- salary in asc order
-from emp;
-
-
 
 select name,dept_id,salary,
 max(salary) over (order by salary asc) as desc_m1, -- salary in asc order
@@ -115,20 +117,21 @@ from emp;
 --this is bcz it only look the previous n curr row XXXXX
 
 --FIRST_VALUE:- it work but it not look for whole table , this also look the previous n curr row
-
---RESOLVE :- resolve by the following and unbounded
-
---ANOTHER WAY OF GETTING LAST VALUE:- FIRST_VALUE with desc order by 
-
 Select e_id,salary,
 FIRST_VALUE(salary) over (order by salary)  as FIRST_salary, -- give the first salary to all row
-LAST_VALUE(salary)  over (order by salary)  as LAST_salary, -- PROMBLE
-LAST_VALUE(salary)  over (order by salary rows between CURRENT ROW and unbounded following) as RESOLVE1 , --RESOLVE
-LAST_VALUE(salary)  over (order by salary rows between unbounded preceding and  CURRENT ROW ) as RESOLVE1 , --RESOLVE
-
-FIRST_VALUE(salary) over (order by salary desc)  as RESOLVE2
+LAST_VALUE(salary)  over (order by salary)  as LAST_salary_wrng  -- ****PROBLEM***** (instead of max value this give the current row val)
 from emp;
 
+--RESOLVE 1:- resolve by the following and unbounded
+Select e_id,salary,
+LAST_VALUE(salary)  over (order by salary rows between CURRENT ROW and unbounded following) as resolve_last_val , --RESOLVE
+LAST_VALUE(salary)  over (order by salary rows between unbounded preceding and  CURRENT ROW ) as running_last_Value --moving last value, not the final one.
+from emp;
+
+--RESOLVE 2:- ANOTHER WAY OF GETTING LAST VALUE:- FIRST_VALUE with desc order by 
+Select e_id,salary,
+FIRST_VALUE(salary) over (order by salary desc)  as RESOLVE2
+from emp;
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 --rolling 3 month sale
 
@@ -140,16 +143,7 @@ sum(sales) as total_Sale
 from orders
 group by datepart(year,or_date) , datepart(month,or_date) 
 ) --order by year_or, month_or;
-
+ 
 select *,
 sum(total_Sale) over (order by year_or, month_or rows between  2 preceding  and current row) as rolling_3_mnth_sale
 from cte1;
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------
-
------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------
